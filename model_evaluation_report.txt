@@ -1,0 +1,8 @@
+Model Evaluation Report
+=====================
+
+Logistic Regression:
+Accuracy: 0.7327823691460055
+
+Random Forest:
+Accuracy: 0.731404958677686

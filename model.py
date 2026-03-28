@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import joblib
+import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -11,20 +12,17 @@ from sklearn.metrics import (
     precision_score, recall_score
 )
 
-# =========================
-# STEP 1: LOAD DATA
-# =========================
-arrivals = pd.read_csv(r'D:\Deveploments\flight_report\arrivals.csv')
-departures = pd.read_csv(r'D:\Deveploments\flight_report\depature.csv')
+print("🚀 Starting model training...")
+
+# STEP 1: LOAD DATA (keep CSV in same folder)
+arrivals = pd.read_csv("arrivals.csv")
+departures = pd.read_csv("depature.csv")
 
 df_flight = pd.concat([arrivals, departures], ignore_index=True)
 
-print("Columns in dataset:")
-print(df_flight.columns)
+print("✅ Data loaded:", df_flight.shape)
 
-# =========================
 # STEP 2: CLEAN DATA
-# =========================
 df_flight.columns = df_flight.columns.str.strip()
 
 df_flight['Scheduled departure time'] = pd.to_datetime(
@@ -46,17 +44,12 @@ df_flight['Arrival Delay (Minutes)'] = pd.to_numeric(
 df_flight['Dep_Time_Minutes'] = df_flight['Dep_Time_Minutes'].fillna(0)
 df_flight['Arrival Delay (Minutes)'] = df_flight['Arrival Delay (Minutes)'].fillna(0)
 
-# =========================
 # STEP 3: TARGET
-# =========================
 df_flight['Delayed'] = (df_flight['Arrival Delay (Minutes)'] > 0).astype(int)
 
-print("\nTarget distribution:")
-print(df_flight['Delayed'].value_counts())
+print("✅ Target created")
 
-# =========================
 # STEP 4: FEATURE ENGINEERING
-# =========================
 df_flight['Date (MM/DD/YYYY)'] = pd.to_datetime(
     df_flight['Date (MM/DD/YYYY)'],
     errors='coerce'
@@ -79,9 +72,9 @@ df_flight = pd.get_dummies(
     drop_first=True
 )
 
-# =========================
+print("✅ Feature engineering done")
+
 # STEP 5: FEATURES
-# =========================
 features = [col for col in df_flight.columns if col not in [
     'Delayed',
     'Arrival Delay (Minutes)',
@@ -98,18 +91,14 @@ features = [col for col in df_flight.columns if col not in [
 X = df_flight[features].fillna(0)
 y = df_flight['Delayed']
 
-print("\nTotal Features Used:", len(features))
+print("✅ Total features:", len(features))
 
-# =========================
 # STEP 6: SPLIT
-# =========================
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# =========================
-# STEP 7: MODEL (BEST)
-# =========================
+# STEP 7: MODEL
 rf_model = RandomForestClassifier(
     n_estimators=300,
     max_depth=10,
@@ -121,69 +110,52 @@ rf_model = RandomForestClassifier(
 
 rf_model.fit(X_train, y_train)
 
-# =========================
+print("✅ Model trained")
+
 # STEP 8: PREDICTION
-# =========================
 rf_prob = rf_model.predict_proba(X_test)[:, 1]
 
-# Try multiple thresholds
-print("\n===== Threshold Testing =====")
-for t in [0.4, 0.5, 0.6]:
-    preds = (rf_prob > t).astype(int)
-    print(f"\nThreshold: {t}")
-    print("Precision:", precision_score(y_test, preds))
-    print("Recall:", recall_score(y_test, preds))
-
-# Use best threshold
 threshold = 0.6
 rf_predictions = (rf_prob > threshold).astype(int)
 
-# =========================
 # STEP 9: EVALUATION
-# =========================
-print("\n===== FINAL MODEL (Random Forest) =====")
+print("\n===== MODEL PERFORMANCE =====")
 print(confusion_matrix(y_test, rf_predictions))
 print(classification_report(y_test, rf_predictions))
 print("Accuracy:", accuracy_score(y_test, rf_predictions))
 
-# =========================
-# STEP 10: FEATURE IMPORTANCE
-# =========================
+# STEP 10: SAVE MODEL (IMPORTANT — BEFORE PLOTS)
+print("📁 Saving model in:", os.getcwd())
+
+joblib.dump(rf_model, "rf_model.pkl")
+joblib.dump(X.columns.tolist(), "features.pkl")
+
+print("✅ Model & features saved successfully!")
+
+# STEP 11: FEATURE IMPORTANCE (SAVE IMAGE)
 importances = rf_model.feature_importances_
 feat_imp = pd.Series(importances, index=X.columns).sort_values(ascending=False)
-
-print("\nTop 10 Important Features:")
-print(feat_imp.head(10))
 
 plt.figure()
 feat_imp.head(10).plot(kind='barh')
 plt.title("Top 10 Feature Importance")
-plt.show()
+plt.savefig("feature_importance.png")
+plt.close()
 
-# =========================
-# STEP 11: ROC CURVE
-# =========================
+# STEP 12: ROC CURVE (SAVE IMAGE)
 fpr, tpr, _ = roc_curve(y_test, rf_prob)
 
 plt.figure()
-plt.plot(fpr, tpr, label="Random Forest")
+plt.plot(fpr, tpr)
 plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
 plt.title("ROC Curve")
-plt.legend()
-plt.show()
+plt.savefig("roc_curve.png")
+plt.close()
 
-# =========================
-# STEP 12: SAVE MODEL
-# =========================
-joblib.dump(rf_model, "rf_model.pkl")
-joblib.dump(X.columns.tolist(), "features.pkl")
+print("📊 Graphs saved as images!")
 
-print("\n✅ Model saved successfully!")
-
-# =========================
-# STEP 13: REAL-TIME PREDICTION
-# =========================
+# STEP 13: TEST FUNCTION
 def predict_flight(dep_time, day):
     data = pd.DataFrame({
         'Dep_Time_Minutes': [dep_time],
@@ -194,8 +166,7 @@ def predict_flight(dep_time, day):
     data = data.reindex(columns=X.columns, fill_value=0)
 
     pred = rf_model.predict(data)[0]
-
     return "Delayed" if pred == 1 else "On Time"
 
 
-print("\nExample Prediction:", predict_flight(800, 2))
+print("🔍 Example Prediction:", predict_flight(800, 2))

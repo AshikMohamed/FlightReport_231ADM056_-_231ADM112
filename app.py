@@ -3,22 +3,16 @@ import pandas as pd
 import joblib
 from datetime import datetime, timedelta
 
-# =========================
 # LOAD MODEL
-# =========================
 model = joblib.load("rf_model.pkl")
 features = joblib.load("features.pkl")
 
-# =========================
 # PAGE CONFIG
-# =========================
-st.set_page_config(page_title="Flight AI", page_icon="✈️", layout="wide")
+st.set_page_config(page_title="Flight AI", layout="wide")
 
-st.title("✈️ Flight Delay Prediction System")
+st.title(" Flight Delay Prediction System")
 
-# =========================
 # FLIGHT DATA (NEW)
-# =========================
 flight_list = [
     "AI101", "AI202", "AI303",
     "6E201", "6E305",
@@ -39,10 +33,8 @@ flight_routes = {
     "SG502": ("JFK", "MIA"),
 }
 
-# =========================
 # INPUT SECTION
-# =========================
-st.subheader("🛫 Flight Information")
+st.subheader(" Flight Information")
 
 col1, col2, col3 = st.columns(3)
 
@@ -60,17 +52,13 @@ with col3:
         ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
     )
 
-# =========================
 # AUTO ROUTE FROM FLIGHT
-# =========================
 origin, destination = flight_routes[flight_no]
 
-st.subheader("🌍 Route")
-st.info(f"✈️ {origin} → {destination}")
+st.subheader(" Route")
+st.info(f" {origin} → {destination}")
 
-# =========================
 # TIME PROCESSING
-# =========================
 dep_minutes = hour * 60 + minute
 dep_hour = hour
 
@@ -80,10 +68,8 @@ day_map = {
 }
 day = day_map[day_name]
 
-# =========================
 # ARRIVAL TIME
-# =========================
-st.subheader("🛬 Flight Timing")
+st.subheader(" Flight Timing")
 
 duration_map = {
     ("DFW","MIA"): 2.5,
@@ -102,11 +88,9 @@ arrival_time = (
     + timedelta(hours=duration)
 ).time()
 
-st.info(f"🛫 Departure: {dep_time_input} → 🛬 Arrival: {arrival_time} ({duration} hrs)")
+st.info(f" Departure: {dep_time_input} →  Arrival: {arrival_time} ({duration} hrs)")
 
-# =========================
 # FEATURE ENGINEERING
-# =========================
 morning = 1 if 5 <= dep_hour < 12 else 0
 afternoon = 1 if 12 <= dep_hour < 17 else 0
 evening = 1 if 17 <= dep_hour < 21 else 0
@@ -129,12 +113,10 @@ input_data = pd.DataFrame([{
 
 input_data = input_data.reindex(columns=features, fill_value=0)
 
-# =========================
 # PREDICTION
-# =========================
-st.subheader("📊 Prediction")
+st.subheader(" Prediction")
 
-if st.button("🚀 Predict"):
+if st.button(" Predict"):
 
     pred = model.predict(input_data)[0]
     prob = model.predict_proba(input_data)[0][1]
@@ -143,12 +125,11 @@ if st.button("🚀 Predict"):
     st.progress(int(prob * 100))
 
     if pred == 1:
-        st.error("⚠️ Flight likely DELAYED")
+        st.error(" Flight likely DELAYED")
     else:
-        st.success("✅ Flight likely ON TIME")
+        st.success(" Flight likely ON TIME")
 
-# =========================
+
 # FOOTER
-# =========================
 st.markdown("---")
-st.caption("✈️ Built with Machine Learning + Streamlit")
+st.caption(" Built with Machine Learning + Streamlit")
